@@ -13,8 +13,12 @@ venv*/
 local_settings.py
 
 # Media
-media/
+media/*
+!media/avatars/
+media/avatars/*
 !media/avatars/default.jpeg
+!media/thumbnails/
+media/thumbnails/*
 !media/thumbnails/default.jpeg
 
 # Static files
