@@ -55,3 +55,65 @@ class ChangedPasswordSerializer(serializers.ModelSerializer):
                 "Пароли не совпадают"
             )
         return attrs
+
+
+class AuthSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'email',
+            'password',
+        ]
+
+
+class DetailAndUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'email',
+            'avatar',
+            'thumbnail',
+            'date_joined',
+        ]
+
+        extra_kwargs = {
+            'email': {'read_only': True},
+            'thumbnail': {'read_only': True},
+            'date_joined': {'read_only': True},
+        }
+
+
+class PasswordRestoreRequestSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'email',
+        ]
+
+
+class PasswordRestoreSerializer(serializers.ModelSerializer):
+    new_password = serializers.CharField(
+        max_length=128,
+    )
+    confirm_password = serializers.CharField(
+        max_length=128,
+    )
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'new_password',
+            'confirm_password',
+        ]
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError(
+                "Пароли не совпадают"
+            )
+        return attrs
