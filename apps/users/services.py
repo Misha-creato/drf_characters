@@ -1,7 +1,18 @@
+import uuid
+from typing import Callable
+
 from django.contrib.auth import authenticate
 from django.db import IntegrityError
 from django.http import QueryDict
+from django.urls import reverse
+
+from rest_framework_simplejwt.token_blacklist.models import (
+    OutstandingToken,
+    BlacklistedToken,
+)
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from notifications.services import Email
 
 from users.models import CustomUser
 from users.serializers import (
@@ -11,6 +22,7 @@ from users.serializers import (
     DetailAndUpdateSerializer,
     PasswordRestoreRequestSerializer,
     PasswordRestoreSerializer,
+    RefreshTokenSerializer,
 )
 
 from utils.logger import (
@@ -18,12 +30,16 @@ from utils.logger import (
     get_log_user_data,
 )
 from utils.response_patterns import generate_response
+from utils.constants import (
+    CONFIRM_EMAIL,
+    PASSWORD_RESTORE,
+)
 
 
 logger = get_logger(__name__)
 
 
-def register(data: QueryDict) -> (int, dict):
+def register(data: QueryDict, get_url_func: Callable) -> (int, dict):
     user_data = get_log_user_data(
         user_data=dict(data),
     )
@@ -69,9 +85,40 @@ def register(data: QueryDict) -> (int, dict):
     logger.info(
         msg=f'Успешно создан пользователь с данными: {user_data}',
     )
-    # TODO send_email
+
+    try:
+        token = RefreshToken.for_user(
+            user=user,
+        )
+    except Exception as exc:
+        logger.error(
+            msg=f'Не удалось получить токен для аутентификации пользователя с данными: {user_data} '
+                f'Ошибки: {exc}',
+        )
+        # return generate_response(
+        #     status_code=500,
+        # ) TODO что возвращать
+
+    refresh = str(token)
+    access = str(token.access_token)
+    response_data = {
+        'refresh': refresh,
+        'access': access
+    }
+
+    status = send_email_by_type(
+        user=user,
+        get_url_func=get_url_func,
+        email_type=CONFIRM_EMAIL,
+    )
+    if status != 200:
+        return generate_response(
+            status_code=206,
+        )
+
     return generate_response(
         status_code=200,
+        data=response_data,
     )
 
 
@@ -124,7 +171,8 @@ def auth(data: QueryDict) -> (int, dict):
         )
     except Exception as exc:
         logger.error(
-            msg=f'Не удалось получить токен при аутентификации пользователя с данными: {user_data}',
+            msg=f'Не удалось получить токен при аутентификации пользователя с данными: {user_data} '
+                f'Ошибки: {exc}',
         )
         return generate_response(
             status_code=500,
@@ -138,6 +186,52 @@ def auth(data: QueryDict) -> (int, dict):
     }
     logger.info(
         msg=f'Успешная аутентификация пользователя с данными: {user_data}',
+    )
+    return generate_response(
+        status_code=200,
+        data=response_data,
+    )
+
+
+def refresh_token(data: QueryDict) -> (int, dict):
+    logger.info(
+        msg=f'Обновление токена',
+    )
+
+    serializer = RefreshTokenSerializer(
+        data=data,
+    )
+    if not serializer.is_valid():
+        logger.error(
+            msg=f'Невалидные данные для обновления токена '
+                f'Ошибки валидации: {serializer.errors}',
+        )
+        return generate_response(
+            status_code=400,
+        )
+
+    validated_data = serializer.validated_data
+    refresh = RefreshToken(validated_data['refresh']) # TODO try/except?
+    response_data = {
+        'access': str(refresh.access_token),
+    }
+    try:
+        refresh.blacklist()
+    except Exception as exc:
+        logger.error(
+            msg=f'Не удалось удалить токен '
+                f'Ошибки: {exc}',
+        )
+        return generate_response(
+            status_code=500,
+        )
+
+    refresh.set_jti()
+    refresh.set_exp()
+    refresh.set_iat()
+    response_data['refresh'] = str(refresh)
+    logger.info(
+        msg=f'Успешно обновлен токен'
     )
     return generate_response(
         status_code=200,
@@ -293,11 +387,33 @@ def update(data: QueryDict, user: CustomUser) -> (int, dict):
     )
 
 
+def remove_tokens(user: CustomUser) -> None:
+    logger.info(
+        msg=f'Удаление токенов пользователя {user}',
+    )
+
+    tokens = OutstandingToken.objects.filter(user=user)
+
+    for token in tokens:
+        BlacklistedToken.objects.get_or_create(token=token)
+
+
 def remove(user: CustomUser) -> (int, dict):
     email = user.email
     logger.info(
         msg=f'Удаление пользователя {email}',
     )
+
+    try:
+        remove_tokens(user=user)
+    except Exception as exc:
+        logger.error(
+            msg=f'Не удалось удалить токены пользователя {email} '
+                f'Ошибки: {exc}',
+        )
+        return generate_response(
+            status_code=500,
+        )
 
     try:
         user.delete()
@@ -318,7 +434,7 @@ def remove(user: CustomUser) -> (int, dict):
     )
 
 
-def password_restore_request(data: QueryDict) -> (int, dict):
+def password_restore_request(data: QueryDict, get_url_func: Callable) -> (int, dict):
     user_data = get_log_user_data(
         user_data=dict(data),
     )
@@ -341,7 +457,7 @@ def password_restore_request(data: QueryDict) -> (int, dict):
     try:
         user = CustomUser.objects.filter(
             email=data['email'],
-        )
+        ).first()
     except Exception as exc:
         logger.error(
             msg=f'Запрос на восстановление пароля. Ошибка при поиске пользователя с данными {user_data} '
@@ -359,7 +475,23 @@ def password_restore_request(data: QueryDict) -> (int, dict):
             status_code=406,
         )
 
-    # TODO send mail
+    status_code = send_email_by_type(
+        user=user,
+        email_type=PASSWORD_RESTORE,
+        get_url_func=get_url_func,
+    )
+
+    if status_code != 200:
+        logger.error(
+            msg=f'Запрос на восстановление пароля пользователя {user_data} не прошел',
+        )
+    else:
+        logger.info(
+            msg=f'Запрос на сброс пароля пользователя {user_data} прошел успешно',
+        )
+    return generate_response(
+        status_code=status_code,
+    )
 
 
 def password_restore(url_hash: str, data: QueryDict) -> (int, dict):
@@ -421,3 +553,53 @@ def password_restore(url_hash: str, data: QueryDict) -> (int, dict):
     return generate_response(
         status_code=200,
     )
+
+
+def send_email_by_type(user: CustomUser, get_url_func: Callable, email_type: str) -> int:
+    '''
+    Отправка письма по типу
+
+    Args:
+        user: пользователь
+        get_url_func: функция для создания ссылки
+        email_type: тип письма
+
+    Returns:
+        Статус
+    '''
+
+    logger.info(
+        msg=f'Получение данных для формирования текста '
+            f'письма {email_type} пользователю {user}',
+    )
+
+    url_hash = str(uuid.uuid4())
+    user.url_hash = url_hash
+
+    try:
+        user.save()
+    except Exception as exc:
+        logger.error(
+            msg=f'Не удалось получить данные для формирования текста письма {email_type} '
+                f'пользователю {user}'
+                f'Ошибки: {exc}',
+        )
+        return 500
+
+    url = get_url_func(reverse(email_type, args=(user.url_hash,)))
+    mail_data = {
+        'url': url,
+    }
+
+    logger.info(
+        msg=f'Данные для формирования текста письма {email_type} '
+            f'пользователю {user} получены: {mail_data}',
+    )
+
+    email = Email(
+        email_type=email_type,
+        mail_data=mail_data,
+        recipient=user,
+    )
+    status = email.send()
+    return status
