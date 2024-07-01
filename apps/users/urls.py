@@ -4,6 +4,7 @@ from django.urls import path
 from users.api import (
     RegisterView,
     AuthView,
+    RefreshToken,
     CustomUserView,
     ConfirmEmailView,
     PasswordRestoreRequestView,
@@ -19,6 +20,10 @@ urlpatterns = [
     path(
         'auth/',
         AuthView.as_view(),
+    ),
+    path(
+        'auth/refresh/',
+        RefreshToken.as_view(),
     ),
     path(
         'confirm_email/',
