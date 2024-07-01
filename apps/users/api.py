@@ -12,14 +12,17 @@ from users.services import (
     confirm_email,
     password_restore_request,
     password_restore,
+    refresh_token,
 )
 
 
 class RegisterView(APIView):
     def post(self, request):
         data = request.data
+        get_url_func = request.build_absolute_uri
         status_code, response_data = register(
             data=data,
+            get_url_func=get_url_func,
         )
         return Response(
             status=status_code,
@@ -31,6 +34,18 @@ class AuthView(APIView):
     def post(self, request):
         data = request.data
         status_code, response_data = auth(
+            data=data,
+        )
+        return Response(
+            status=status_code,
+            data=response_data
+        )
+
+
+class RefreshToken(APIView):
+    def post(self, request):
+        data = request.data
+        status_code, response_data = refresh_token(
             data=data,
         )
         return Response(
@@ -101,8 +116,10 @@ class ConfirmEmailView(APIView):
 class PasswordRestoreRequestView(APIView):
     def post(self, request):
         data = request.data
+        get_url_func = request.build_absolute_uri
         status_code, response_data = password_restore_request(
             data=data,
+            get_url_func=get_url_func,
         )
         return Response(
             status=status_code,
