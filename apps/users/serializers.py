@@ -117,3 +117,7 @@ class PasswordRestoreSerializer(serializers.ModelSerializer):
                 "Пароли не совпадают"
             )
         return attrs
+
+
+class RefreshTokenSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
