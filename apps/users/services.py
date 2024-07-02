@@ -6,10 +6,6 @@ from django.db import IntegrityError
 from django.http import QueryDict
 from django.urls import reverse
 
-from rest_framework_simplejwt.token_blacklist.models import (
-    OutstandingToken,
-    BlacklistedToken,
-)
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from notifications.services import Email
@@ -22,7 +18,7 @@ from users.serializers import (
     DetailAndUpdateSerializer,
     PasswordRestoreRequestSerializer,
     PasswordRestoreSerializer,
-    RefreshTokenSerializer,
+    RefreshAndLogoutSerializer,
 )
 
 from utils.logger import (
@@ -85,6 +81,11 @@ def register(data: QueryDict, get_url_func: Callable) -> (int, dict):
     logger.info(
         msg=f'Успешно создан пользователь с данными: {user_data}',
     )
+    send_email_by_type(
+        user=user,
+        get_url_func=get_url_func,
+        email_type=CONFIRM_EMAIL,
+    )
 
     try:
         token = RefreshToken.for_user(
@@ -95,9 +96,9 @@ def register(data: QueryDict, get_url_func: Callable) -> (int, dict):
             msg=f'Не удалось получить токен для аутентификации пользователя с данными: {user_data} '
                 f'Ошибки: {exc}',
         )
-        # return generate_response(
-        #     status_code=500,
-        # ) TODO что возвращать
+        return generate_response(
+            status_code=201,
+        )
 
     refresh = str(token)
     access = str(token.access_token)
@@ -105,17 +106,6 @@ def register(data: QueryDict, get_url_func: Callable) -> (int, dict):
         'refresh': refresh,
         'access': access
     }
-
-    status = send_email_by_type(
-        user=user,
-        get_url_func=get_url_func,
-        email_type=CONFIRM_EMAIL,
-    )
-    if status != 200:
-        return generate_response(
-            status_code=206,
-        )
-
     return generate_response(
         status_code=200,
         data=response_data,
@@ -198,7 +188,7 @@ def refresh_token(data: QueryDict) -> (int, dict):
         msg=f'Обновление токена',
     )
 
-    serializer = RefreshTokenSerializer(
+    serializer = RefreshAndLogoutSerializer(
         data=data,
     )
     if not serializer.is_valid():
@@ -211,7 +201,17 @@ def refresh_token(data: QueryDict) -> (int, dict):
         )
 
     validated_data = serializer.validated_data
-    refresh = RefreshToken(validated_data['refresh']) # TODO try/except?
+    try:
+        refresh = RefreshToken(validated_data['refresh'])
+    except Exception as exc:
+        logger.error(
+            msg=f'Не удалось обновить токен '
+                f'Ошибки: {exc}',
+        )
+        return generate_response(
+            status_code=403,
+        )
+
     response_data = {
         'access': str(refresh.access_token),
     }
@@ -236,6 +236,54 @@ def refresh_token(data: QueryDict) -> (int, dict):
     return generate_response(
         status_code=200,
         data=response_data,
+    )
+
+
+def logout(data: QueryDict) -> (int, dict):
+    logger.info(
+        msg=f'Выход из системы',
+    )
+
+    serializer = RefreshAndLogoutSerializer(
+        data=data,
+    )
+    if not serializer.is_valid():
+        logger.error(
+            msg=f'Невалидные данные для выхода из системы '
+                f'Ошибки валидации: {serializer.errors}',
+        )
+        return generate_response(
+            status_code=400,
+        )
+
+    validated_data = serializer.validated_data
+    try:
+        refresh = RefreshToken(validated_data['refresh'])
+    except Exception as exc:
+        logger.error(
+            msg=f'Не удалось выйти из системы '
+                f'Ошибки: {exc}',
+        )
+        return generate_response(
+            status_code=403,
+        )
+
+    try:
+        refresh.blacklist()
+    except Exception as exc:
+        logger.error(
+            msg=f'Не удалось удалить токен '
+                f'Ошибки: {exc}',
+        )
+        return generate_response(
+            status_code=500,
+        )
+
+    logger.info(
+        msg='Успешный выход из системы',
+    )
+    return generate_response(
+        status_code=200,
     )
 
 
@@ -387,33 +435,11 @@ def update(data: QueryDict, user: CustomUser) -> (int, dict):
     )
 
 
-def remove_tokens(user: CustomUser) -> None:
-    logger.info(
-        msg=f'Удаление токенов пользователя {user}',
-    )
-
-    tokens = OutstandingToken.objects.filter(user=user)
-
-    for token in tokens:
-        BlacklistedToken.objects.get_or_create(token=token)
-
-
 def remove(user: CustomUser) -> (int, dict):
     email = user.email
     logger.info(
         msg=f'Удаление пользователя {email}',
     )
-
-    try:
-        remove_tokens(user=user)
-    except Exception as exc:
-        logger.error(
-            msg=f'Не удалось удалить токены пользователя {email} '
-                f'Ошибки: {exc}',
-        )
-        return generate_response(
-            status_code=500,
-        )
 
     try:
         user.delete()
