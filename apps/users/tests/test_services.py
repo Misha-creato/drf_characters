@@ -2,7 +2,9 @@ import json
 import os
 from unittest.mock import patch
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.models import CustomUser
 from users.services import (
@@ -12,7 +14,7 @@ from users.services import (
     remove,
     confirm_email,
     password_restore,
-    password_restore_request,
+    password_restore_request, refresh_token, logout, change_password, update,
 )
 
 
@@ -157,6 +159,113 @@ class ServicesTest(TestCase):
             status_code, response_data = password_restore(
                 url_hash=url_hash,
                 data=data,
+            )
+
+            self.assertEqual(status_code, code, msg=fixture)
+
+    def test_refresh_token(self):
+        token = RefreshToken.for_user(
+            user=self.user,
+        )
+        path = f'{self.path}/refresh_token'
+        fixtures = (
+            (200, 'valid'),
+            (400, 'invalid'),
+            (403, 'forbidden'),
+        )
+
+        for code, name in fixtures:
+            fixture = f'{code}_{name}'
+
+            with open(f'{path}/{fixture}_request.json') as file:
+                data = json.load(file)
+
+            refresh = data.get('refresh')
+
+            if refresh is not None:
+                data['refresh'] = str(token)
+
+            status_code, response_data = refresh_token(
+                data=data,
+            )
+
+            self.assertEqual(status_code, code, msg=fixture)
+
+    def test_logout(self):
+        token = RefreshToken.for_user(
+            user=self.user,
+        )
+        path = f'{self.path}/logout'
+        fixtures = (
+            (200, 'valid'),
+            (400, 'invalid'),
+            (403, 'forbidden'),
+        )
+
+        for code, name in fixtures:
+            fixture = f'{code}_{name}'
+
+            with open(f'{path}/{fixture}_request.json') as file:
+                data = json.load(file)
+
+            refresh = data.get('refresh')
+
+            if refresh is not None:
+                data['refresh'] = str(token)
+
+            status_code, response_data = logout(
+                data=data,
+            )
+
+            self.assertEqual(status_code, code, msg=fixture)
+
+    def test_change_password(self):
+        path = f'{self.path}/change_password'
+        fixtures = (
+            (200, 'valid'),
+            (400, 'invalid_old_password'),
+            (400, 'invalid_structure'),
+            (400, 'password_mismatch'),
+        )
+
+        for code, name in fixtures:
+            fixture = f'{code}_{name}'
+
+            with open(f'{path}/{fixture}_request.json') as file:
+                data = json.load(file)
+
+            status_code, response_data = change_password(
+                data=data,
+                user=self.user,
+            )
+
+            self.assertEqual(status_code, code, msg=fixture)
+
+    def test_update(self):
+        path = f'{self.path}/update'
+        fixtures = (
+            (200, 'valid'),
+        )
+
+        for code, name in fixtures:
+            fixture = f'{code}_{name}'
+
+            with open(f'{path}/{fixture}_request.json') as file:
+                data = json.load(file)
+
+            avatar_path = data.pop('avatar_path', None)
+
+            if avatar_path is not None:
+                with open(f"{self.files}/{avatar_path}", 'rb') as image:
+                    data['avatar'] = SimpleUploadedFile(
+                        name=image.name,
+                        content=image.read(),
+                        content_type='image/jpeg',
+                    )
+
+            status_code, response_data = update(
+                data=data,
+                user=self.user,
             )
 
             self.assertEqual(status_code, code, msg=fixture)
