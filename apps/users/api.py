@@ -13,6 +13,7 @@ from users.services import (
     password_restore_request,
     password_restore,
     refresh_token,
+    logout,
 )
 
 
@@ -42,10 +43,24 @@ class AuthView(APIView):
         )
 
 
-class RefreshToken(APIView):
+class RefreshTokenView(APIView):
     def post(self, request):
         data = request.data
         status_code, response_data = refresh_token(
+            data=data,
+        )
+        return Response(
+            status=status_code,
+            data=response_data
+        )
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+        status_code, response_data = logout(
             data=data,
         )
         return Response(
