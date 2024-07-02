@@ -1,6 +1,9 @@
 from django.contrib.auth import get_user_model
 
-from characters.models import CharactersAPIKey, Character
+from characters.models import (
+    CharactersAPIKey,
+    Character,
+)
 from serializers import CharacterSerializer
 from utils.constants import ACCESS_LEVELS
 from utils.logger import get_logger
@@ -30,7 +33,7 @@ def get_key(user: User) -> (int, dict):
         )
 
     response_data = {
-        'key': api_key.key,
+        'api_key': api_key.key,
     }
     logger.info(
         msg=f'Получен API ключ персонажей для пользователя {user}',
@@ -41,7 +44,7 @@ def get_key(user: User) -> (int, dict):
     )
 
 
-def get_level(api_key: str) -> (int, tuple):
+def get_level(api_key: str) -> (int, str):
     logger.info(
         msg=f'Получение уровня по API ключу персонажей {api_key}',
     )
@@ -59,13 +62,13 @@ def get_level(api_key: str) -> (int, tuple):
             msg=f'Не удалось проверить API ключ персонажей {api_key} '
                 f'Ошибки: {exc}',
         )
-        return 500, ()
+        return 500, '0'
 
     if key is None:
         logger.info(
             msg=f'API ключ персонажей {api_key} не найден',
         )
-        return 404, ()
+        return 404, '0'
 
     level = key.access_level
     logger.info(
@@ -89,11 +92,12 @@ def get_characters_by_level(api_key: str) -> (int, dict):
 
     try:
         characters = Character.objects.filter(
-            level=level,
+            level__lte=level,
         )
     except Exception as exc:
         logger.error(
-            msg=f'Не удалось получить список персонажей уровня {level}',
+            msg=f'Не удалось получить список персонажей уровня {level} '
+                f'Ошибки: {exc}',
         )
         return generate_response(
             status_code=500,
