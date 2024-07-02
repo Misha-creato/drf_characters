@@ -119,5 +119,5 @@ class PasswordRestoreSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class RefreshTokenSerializer(serializers.Serializer):
+class RefreshAndLogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
