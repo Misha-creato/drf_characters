@@ -239,9 +239,9 @@ def refresh_token(data: QueryDict) -> (int, dict):
     )
 
 
-def logout(data: QueryDict) -> (int, dict):
+def logout(data: QueryDict, user: CustomUser) -> (int, dict):
     logger.info(
-        msg=f'Выход из системы',
+        msg=f'Выход из системы пользователя {user}',
     )
 
     serializer = RefreshAndLogoutSerializer(
@@ -249,7 +249,7 @@ def logout(data: QueryDict) -> (int, dict):
     )
     if not serializer.is_valid():
         logger.error(
-            msg=f'Невалидные данные для выхода из системы '
+            msg=f'Невалидные данные для выхода из системы пользователя {user} '
                 f'Ошибки валидации: {serializer.errors}',
         )
         return generate_response(
@@ -261,18 +261,18 @@ def logout(data: QueryDict) -> (int, dict):
         refresh = RefreshToken(validated_data['refresh'])
     except Exception as exc:
         logger.error(
-            msg=f'Не удалось выйти из системы '
+            msg=f'Невалидный токен для выхода пользователя {user} '
                 f'Ошибки: {exc}',
         )
         return generate_response(
-            status_code=403,
+            status_code=500,
         )
 
     try:
         refresh.blacklist()
     except Exception as exc:
         logger.error(
-            msg=f'Не удалось удалить токен '
+            msg=f'Не удалось удалить токен пользователя {user} '
                 f'Ошибки: {exc}',
         )
         return generate_response(
@@ -280,7 +280,7 @@ def logout(data: QueryDict) -> (int, dict):
         )
 
     logger.info(
-        msg='Успешный выход из системы',
+        msg=f'Успешный выход из системы пользователя {user} ',
     )
     return generate_response(
         status_code=200,
