@@ -4,7 +4,7 @@ from characters.models import (
     CharactersAPIKey,
     Character,
 )
-from serializers import CharacterSerializer
+from characters.serializers import CharacterSerializer
 from utils.constants import ACCESS_LEVELS
 from utils.logger import get_logger
 from utils.response_patterns import generate_response
@@ -93,6 +93,7 @@ def get_characters_by_level(api_key: str) -> (int, dict):
     try:
         characters = Character.objects.filter(
             level__lte=level,
+            is_available=True,
         )
     except Exception as exc:
         logger.error(
@@ -109,6 +110,51 @@ def get_characters_by_level(api_key: str) -> (int, dict):
     ).data
     logger.info(
         msg=f'Список персонажей по API ключу персонажей {api_key} получен',
+    )
+    return generate_response(
+        status_code=200,
+        data=response_data,
+    )
+
+
+def get_characters_by_ids(api_key: str, ids: str) -> (int, dict):
+    ids = ids.split(',')
+    logger.info(
+        msg=f'Получение списка персонажей по ключу {api_key} '
+            f'и списку id {ids}',
+    )
+
+    status_code, level = get_level(
+        api_key=api_key,
+    )
+    if status_code != 200:
+        return generate_response(
+            status_code=status_code,
+        )
+
+    try:
+        characters = Character.objects.filter(
+            level__lte=level,
+            id__in=ids,
+            is_available=True,
+        )
+    except Exception as exc:
+        logger.error(
+            msg=f'Не удалось получить список персонажей уровня {level} '
+                f'по списку id {ids}'
+                f'Ошибки: {exc}',
+        )
+        return generate_response(
+            status_code=500,
+        )
+
+    response_data = CharacterSerializer(
+        instance=characters,
+        many=True,
+    ).data
+    logger.info(
+        msg=f'Список персонажей по API ключу персонажей {api_key} '
+            f'и списку id {ids} получен',
     )
     return generate_response(
         status_code=200,
