@@ -1,4 +1,6 @@
-from django.conf.global_settings import EMAIL_HOST_USER
+from config.settings import (
+    EMAIL_HOST_USER,
+)
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 
@@ -55,7 +57,7 @@ class Email:
             msg='Получение настроек email',
         )
         try:
-            settings = EmailSettings.get_solo()
+            email_settings = EmailSettings.get_solo()
         except Exception as exc:
             logger.error(
                 msg=f'Не удалось получить настройки email'
@@ -65,7 +67,7 @@ class Email:
         logger.info(
             msg='Настройки email получены',
         )
-        return settings
+        return email_settings
 
     def formate_email_text(self) -> (int, dict):
         '''
