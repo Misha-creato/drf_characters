@@ -33,6 +33,10 @@ class Character(models.Model):
         choices=ACCESS_LEVELS,
         default=ACCESS_LEVELS[0][0],
     )
+    is_available = models.BooleanField(
+        verbose_name='Доступен',
+        default=True,
+    )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
         auto_now_add=True,
