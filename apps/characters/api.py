@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from characters.services import (
     get_key,
     get_characters_by_level,
+    get_characters_by_ids,
 )
 
 
@@ -26,9 +27,16 @@ class CharacterListView(APIView):
 
     def get(self, request):
         api_key = request.headers.get('Api-Key', '')
-        status_code, response_data = get_characters_by_level(
-            api_key=api_key,
-        )
+        ids = request.query_params.get('ids')
+        if ids:
+            status_code, response_data = get_characters_by_ids(
+                api_key=api_key,
+                ids=ids,
+            )
+        else:
+            status_code, response_data = get_characters_by_level(
+                api_key=api_key,
+            )
         return Response(
             status=status_code,
             data=response_data
