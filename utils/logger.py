@@ -1,5 +1,9 @@
+import gzip
 import inspect
 import logging
+import os
+import shutil
+from datetime import datetime
 
 from colorama import (
     init,
@@ -18,6 +22,7 @@ LEVEL_COLORS = {
     logging.ERROR: Fore.RED,
     logging.CRITICAL: Fore.MAGENTA,
 }
+LOG_DIR = 'logs'
 
 
 class ColorFormatter(logging.Formatter):
@@ -54,6 +59,20 @@ class ColorFormatter(logging.Formatter):
         return super().format(record)
 
 
+def namer(name):
+    name = name.split('.log')[0]
+    path, name = name.split('logs/')
+    time = datetime.now().strftime('%Y-%m-%d')
+    return f'{LOG_DIR}/archive/{name}-{time}.log.gz'
+
+
+def rotator(source, dest):
+    with open(source, 'rb') as f_in:
+        with gzip.open(dest, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    os.remove(source)
+
+
 def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     console_handler = logging.StreamHandler()
@@ -62,7 +81,16 @@ def get_logger(name: str) -> logging.Logger:
         '%(asctime)s %(levelname)s %(message)s %(name)s.%(funcName)s'
     )
     console_handler.setFormatter(formatter)
-    logger.handlers = [console_handler]
+
+    file_handler = logging.handlers.RotatingFileHandler(
+        f"{LOG_DIR}/{name}.log",
+        maxBytes=512000,
+        backupCount=5,
+    )
+    file_handler.namer = namer
+    file_handler.rotator = rotator
+    file_handler.setFormatter(formatter)
+    logger.handlers = [console_handler, file_handler]
     return logger
 
 
