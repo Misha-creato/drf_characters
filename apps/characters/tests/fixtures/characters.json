@@ -1,0 +1,72 @@
+[
+  {
+    "model": "characters.character",
+    "pk": 1,
+    "fields": {
+      "name": "Dragon",
+      "hp": 20,
+      "attack": 10,
+      "speed": 3,
+      "image": "",
+      "level": "0",
+      "is_available": true,
+      "created_at": "2024-07-01T14:13:19.862Z"
+    }
+  },
+  {
+    "model": "characters.character",
+    "pk": 2,
+    "fields": {
+      "name": "Goblin",
+      "hp": 12,
+      "attack": 5,
+      "speed": 4,
+      "image": "",
+      "level": "0",
+      "is_available": true,
+      "created_at": "2024-07-01T14:13:43.222Z"
+    }
+  },
+  {
+    "model": "characters.character",
+    "pk": 3,
+    "fields": {
+      "name": "Palladin",
+      "hp": 13,
+      "attack": 7,
+      "speed": 3,
+      "image": "",
+      "level": "1",
+      "is_available": true,
+      "created_at": "2024-07-01T14:14:06.189Z"
+    }
+  },
+  {
+    "model": "characters.character",
+    "pk": 4,
+    "fields": {
+      "name": "Knight",
+      "hp": 15,
+      "attack": 7,
+      "speed": 4,
+      "image": "",
+      "level": "2",
+      "is_available": true,
+      "created_at": "2024-07-01T14:14:40.548Z"
+    }
+  },
+  {
+    "model": "characters.character",
+    "pk": 5,
+    "fields": {
+      "name": "Berserk",
+      "hp": 18,
+      "attack": 13,
+      "speed": 2,
+      "image": "",
+      "level": "3",
+      "is_available": true,
+      "created_at": "2024-07-01T14:15:19.273Z"
+    }
+  }
+]

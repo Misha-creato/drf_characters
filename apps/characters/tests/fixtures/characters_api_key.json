@@ -1,0 +1,38 @@
+[
+  {
+    "model": "characters.charactersapikey",
+    "pk": 1,
+    "fields": {
+      "key": "33ca697a-3f0e-490d-a660-b4d4c997c6f9",
+      "access_level": "0",
+      "created_at": "2024-07-01T11:47:58.179Z"
+    }
+  },
+  {
+    "model": "characters.charactersapikey",
+    "pk": 3,
+    "fields": {
+      "key": "ec78dd68-795f-4ca7-a7a5-e60516e85f07",
+      "access_level": "1",
+      "created_at": "2024-07-01T14:36:29.858Z"
+    }
+  },
+  {
+    "model": "characters.charactersapikey",
+    "pk": 4,
+    "fields": {
+      "key": "6e4dc1ee-0c61-414d-a026-16b7b36ec25d",
+      "access_level": "2",
+      "created_at": "2024-07-04T13:12:57.351Z"
+    }
+  },
+  {
+    "model": "characters.charactersapikey",
+    "pk": 5,
+    "fields": {
+      "key": "a22a35a5-bb01-4c47-adb8-3bda0f2c0b24",
+      "access_level": "3",
+      "created_at": "2024-07-04T13:13:19.045Z"
+    }
+  }
+]
