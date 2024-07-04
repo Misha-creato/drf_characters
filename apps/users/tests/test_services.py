@@ -14,7 +14,11 @@ from users.services import (
     remove,
     confirm_email,
     password_restore,
-    password_restore_request, refresh_token, logout, change_password, update,
+    password_restore_request,
+    refresh_token,
+    logout,
+    change_password,
+    update,
 )
 
 
