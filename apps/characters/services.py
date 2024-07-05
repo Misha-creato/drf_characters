@@ -1,10 +1,14 @@
 from django.contrib.auth import get_user_model
+from django.http import QueryDict
 
 from characters.models import (
     CharactersAPIKey,
     Character,
 )
-from characters.serializers import CharacterSerializer
+from characters.serializers import (
+    CharacterSerializer,
+    CharacterIDSerializer,
+)
 from utils.constants import ACCESS_LEVELS
 from utils.logger import get_logger
 from utils.response_patterns import generate_response
@@ -53,6 +57,7 @@ def get_level(api_key: str) -> (int, str):
             msg=f'API ключ персонажей {api_key} не предоставлен',
         )
         return 200, ACCESS_LEVELS[0][0]
+
     try:
         key = CharactersAPIKey.objects.filter(
             key=api_key,
@@ -91,9 +96,14 @@ def get_characters_by_level(api_key: str) -> (int, dict):
         )
 
     try:
+        levels = CharactersAPIKey.objects.filter(
+            on=False,
+        ).values_list('access_level', flat=True)
         characters = Character.objects.filter(
             level__lte=level,
             is_available=True,
+        ).exclude(
+            level__in=list(levels),
         )
     except Exception as exc:
         logger.error(
@@ -117,12 +127,25 @@ def get_characters_by_level(api_key: str) -> (int, dict):
     )
 
 
-def get_characters_by_ids(api_key: str, ids: str) -> (int, dict):
-    ids = ids.split(',')
+def get_characters_by_ids(api_key: str, data: QueryDict) -> (int, dict):
+    ids = data.get('characters_ids')
     logger.info(
         msg=f'Получение списка персонажей по ключу {api_key} '
             f'и списку id {ids}',
     )
+
+    serializer = CharacterIDSerializer(
+        data=data,
+    )
+    if not serializer.is_valid():
+        logger.error(
+            msg=f'Невалидные данные для получения списка персонажей '
+                f'по ключу {api_key} и списку id {ids} '
+                f'Ошибки: {serializer.errors}',
+        )
+        return generate_response(
+            status_code=400,
+        )
 
     status_code, level = get_level(
         api_key=api_key,
@@ -133,10 +156,15 @@ def get_characters_by_ids(api_key: str, ids: str) -> (int, dict):
         )
 
     try:
+        levels = CharactersAPIKey.objects.filter(
+            on=False,
+        ).values_list('access_level', flat=True)
         characters = Character.objects.filter(
             level__lte=level,
             id__in=ids,
             is_available=True,
+        ).exclude(
+            level__in=list(levels),
         )
     except Exception as exc:
         logger.error(
