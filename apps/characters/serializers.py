@@ -16,3 +16,9 @@ class CharacterSerializer(serializers.ModelSerializer):
             'speed',
             'level',
         ]
+
+
+class CharacterIDSerializer(serializers.Serializer):
+    characters_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1)
+    )
