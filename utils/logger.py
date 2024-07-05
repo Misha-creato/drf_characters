@@ -3,7 +3,8 @@ import inspect
 import logging
 import os
 import shutil
-from datetime import datetime
+import datetime
+import time
 
 from colorama import (
     init,
@@ -11,9 +12,7 @@ from colorama import (
     Style,
 )
 
-
 init(autoreset=True)
-
 
 LEVEL_COLORS = {
     logging.DEBUG: Fore.CYAN,
@@ -23,6 +22,7 @@ LEVEL_COLORS = {
     logging.CRITICAL: Fore.MAGENTA,
 }
 LOG_DIR = 'logs'
+LOG_DIR_ARCHIVE = 'archive'
 
 
 class ColorFormatter(logging.Formatter):
@@ -34,7 +34,7 @@ class ColorFormatter(logging.Formatter):
         'CRITICAL': Fore.MAGENTA
     }
 
-    def format(self, record):
+    def get_func_hierarchy(self, record) -> str:
         stack = inspect.stack()
 
         function_hierarchy = []
@@ -46,9 +46,12 @@ class ColorFormatter(logging.Formatter):
                 function_hierarchy.append(function_name)
 
         if len(function_hierarchy) > 1:
-            record.funcName = " -> ".join(function_hierarchy)
+            return " -> ".join(function_hierarchy)
         else:
-            record.funcName = function_hierarchy[-1] if function_hierarchy else record.funcName
+            return ""
+
+    def format(self, record):
+        record.func_hierarchy = self.get_func_hierarchy(record)
 
         levelname = record.levelname
         if levelname in self.COLOR_CODES:
@@ -60,13 +63,16 @@ class ColorFormatter(logging.Formatter):
 
 
 def namer(name):
-    name = name.split('.log')[0]
+    name = name.replace('.log.', '-')
     path, name = name.split('logs/')
-    time = datetime.now().strftime('%Y-%m-%d')
-    return f'{LOG_DIR}/archive/{name}-{time}.log.gz'
+    return f'{LOG_DIR}/{LOG_DIR_ARCHIVE}/{name}.log.gz'
 
 
 def rotator(source, dest):
+    dest_dir = os.path.dirname(dest)
+    if not os.path.exists(dest_dir):
+        os.makedirs(dest_dir)
+
     with open(source, 'rb') as f_in:
         with gzip.open(dest, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
@@ -78,15 +84,20 @@ def get_logger(name: str) -> logging.Logger:
     console_handler = logging.StreamHandler()
     logger.setLevel(logging.DEBUG)
     formatter = ColorFormatter(
-        '%(asctime)s %(levelname)s %(message)s %(name)s.%(funcName)s'
+        '%(asctime)s %(levelname)s %(message)s %(name)s.%(funcName)s %(func_hierarchy)s'
     )
     console_handler.setFormatter(formatter)
 
-    file_handler = logging.handlers.RotatingFileHandler(
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+
+    file_handler = logging.handlers.TimedRotatingFileHandler(
         f"{LOG_DIR}/{name}.log",
-        maxBytes=512000,
-        backupCount=5,
+        when='midnight',
+        interval=1,
+        atTime=datetime.time(23, 59, 59),
     )
+    file_handler.suffix = "%Y-%m-%d"
     file_handler.namer = namer
     file_handler.rotator = rotator
     file_handler.setFormatter(formatter)
