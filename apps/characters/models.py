@@ -63,6 +63,10 @@ class CharactersAPIKey(models.Model):
         choices=ACCESS_LEVELS,
         default=ACCESS_LEVELS[0][0],
     )
+    on = models.BooleanField(
+        verbose_name='Включен',
+        default=True,
+    )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
         auto_now_add=True,
