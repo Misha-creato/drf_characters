@@ -36,6 +36,30 @@ logger = get_logger(__name__)
 
 
 def register(data: QueryDict, get_url_func: Callable) -> (int, dict):
+    '''
+    Регистрация пользователя
+
+    Args:
+        data: данные пользователя
+            {
+              "email": "test_new@cc.com",
+              "password": "test123",
+              "confirm_password": "test123"
+            }
+        get_url_func: функция для создания полного url пути
+                    используется в отправке писем
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {
+                "refresh": "123",
+                "access": "456"
+            }
+        }
+    '''
     user_data = get_log_user_data(
         user_data=dict(data),
     )
@@ -113,6 +137,27 @@ def register(data: QueryDict, get_url_func: Callable) -> (int, dict):
 
 
 def auth(data: QueryDict) -> (int, dict):
+    '''
+    Аутентификация пользователя
+
+    Args:
+        data: данные пользователя
+            {
+              "email": "test@cc.com",
+              "password": "test123"
+            }
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {
+                "refresh": "123",
+                "access": "456"
+            }
+        }
+    '''
     user_data = get_log_user_data(
         user_data=dict(data),
     )
@@ -184,8 +229,27 @@ def auth(data: QueryDict) -> (int, dict):
 
 
 def refresh_token(data: QueryDict) -> (int, dict):
+    '''
+    Обновление токена
+
+    Args:
+        data: данные для обновления
+            {
+              "refresh": "valid_token"
+            }
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {
+                "access": "456"
+            }
+        }
+    '''
     logger.info(
-        msg=f'Обновление токена',
+        msg='Обновление токена',
     )
 
     serializer = RefreshAndLogoutSerializer(
@@ -193,7 +257,7 @@ def refresh_token(data: QueryDict) -> (int, dict):
     )
     if not serializer.is_valid():
         logger.error(
-            msg=f'Невалидные данные для обновления токена '
+            msg='Невалидные данные для обновления токена '
                 f'Ошибки валидации: {serializer.errors}',
         )
         return generate_response(
@@ -205,7 +269,7 @@ def refresh_token(data: QueryDict) -> (int, dict):
         refresh = RefreshToken(validated_data['refresh'])
     except Exception as exc:
         logger.error(
-            msg=f'Не удалось обновить токен '
+            msg='Не удалось обновить токен '
                 f'Ошибки: {exc}',
         )
         return generate_response(
@@ -219,7 +283,7 @@ def refresh_token(data: QueryDict) -> (int, dict):
         refresh.blacklist()
     except Exception as exc:
         logger.error(
-            msg=f'Не удалось удалить токен '
+            msg='Не удалось удалить токен '
                 f'Ошибки: {exc}',
         )
         return generate_response(
@@ -231,7 +295,7 @@ def refresh_token(data: QueryDict) -> (int, dict):
     refresh.set_iat()
     response_data['refresh'] = str(refresh)
     logger.info(
-        msg=f'Успешно обновлен токен'
+        msg='Успешно обновлен токен'
     )
     return generate_response(
         status_code=200,
@@ -240,6 +304,23 @@ def refresh_token(data: QueryDict) -> (int, dict):
 
 
 def logout(data: QueryDict, user: CustomUser) -> (int, dict):
+    '''
+    Выход из системы
+
+    Args:
+        data: данные для выхода
+            {
+              "refresh": "valid_token"
+            }
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {}
+        }
+    '''
     logger.info(
         msg=f'Выход из системы пользователя {user}',
     )
@@ -288,6 +369,20 @@ def logout(data: QueryDict, user: CustomUser) -> (int, dict):
 
 
 def confirm_email(url_hash: str) -> (int, dict):
+    '''
+    Подтверждение email
+
+    Args:
+        url_hash: хэш
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {}
+        }
+    '''
     logger.info(
         msg=f'Подтверждение email пользователя с хэшем: {url_hash}',
     )
@@ -335,6 +430,27 @@ def confirm_email(url_hash: str) -> (int, dict):
 
 
 def change_password(data: QueryDict, user: CustomUser) -> (int, dict):
+    '''
+    Смена пароля пользователя
+
+    Args:
+        data: данные пользователя
+            {
+              "old_password": "test123",
+              "new_password": "new_password123",
+              "confirm_password": "new_password123"
+            }
+        user: пользователь
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {}
+        }
+    '''
+
     logger.info(
         msg=f'Смена пароля пользователя {user}',
     )
@@ -374,6 +490,25 @@ def change_password(data: QueryDict, user: CustomUser) -> (int, dict):
 
 
 def detail(user: CustomUser) -> (int, dict):
+    '''
+    Данные пользователя
+
+    Args:
+        user: пользователь
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {
+                "email": "test@cc.com",
+                "avatar": "/media/avatars/avatar.png",
+                "thumbnail": "/media/thumbnails/thumbnail.png",
+                "date_joined": "2024-06-27T18:51:18.019255+05:00"
+            }
+        }
+    '''
     logger.info(
         msg=f'Получение данных пользователя {user}',
     )
@@ -392,6 +527,29 @@ def detail(user: CustomUser) -> (int, dict):
 
 
 def update(data: QueryDict, user: CustomUser) -> (int, dict):
+    '''
+    Обновление данных пользователя
+
+    Args:
+        data: данные пользователя
+            {
+              "avatar": test_avatar.jpeg
+            }
+        user: пользователь
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {
+                "email": "test@cc.com",
+                "avatar": "/media/avatars/avatar.png",
+                "thumbnail": "/media/thumbnails/thumbnail.png",
+                "date_joined": "2024-06-27T18:51:18.019255+05:00"
+            }
+        }
+    '''
     user_data = get_log_user_data(
         user_data=dict(data),
     )
@@ -436,6 +594,20 @@ def update(data: QueryDict, user: CustomUser) -> (int, dict):
 
 
 def remove(user: CustomUser) -> (int, dict):
+    '''
+    Удаление пользователя
+
+    Args:
+        user: пользователь
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {}
+        }
+    '''
     email = user.email
     logger.info(
         msg=f'Удаление пользователя {email}',
@@ -461,6 +633,25 @@ def remove(user: CustomUser) -> (int, dict):
 
 
 def password_restore_request(data: QueryDict, get_url_func: Callable) -> (int, dict):
+    '''
+    Запрос на восстановление пароля пользователя
+
+    Args:
+        data: данные пользователя
+            {
+              "email": "test@cc.com"
+            }
+        get_url_func: функция для создания полного url пути
+                    используется в отправке писем
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {}
+        }
+    '''
     user_data = get_log_user_data(
         user_data=dict(data),
     )
@@ -521,6 +712,25 @@ def password_restore_request(data: QueryDict, get_url_func: Callable) -> (int, d
 
 
 def password_restore(url_hash: str, data: QueryDict) -> (int, dict):
+    '''
+    Восстановление пароля пользователя
+
+    Args:
+        url_hash: хэш
+        data: данные пользователя
+            {
+              "new_password": "new_password123",
+              "confirm_password": "new_password123"
+            }
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {}
+        }
+    '''
     logger.info(
         msg=f'Восстановление пароля пользователя с хэшем: {url_hash}',
     )
@@ -587,15 +797,16 @@ def send_email_by_type(user: CustomUser, get_url_func: Callable, email_type: str
 
     Args:
         user: пользователь
-        get_url_func: функция для создания ссылки
+        get_url_func: функция для создания полного url пути
+                    используется в отправке писем
         email_type: тип письма
 
     Returns:
-        Статус
+        Код статуса
     '''
 
     logger.info(
-        msg=f'Получение данных для формирования текста '
+        msg='Получение данных для формирования текста '
             f'письма {email_type} пользователю {user}',
     )
 

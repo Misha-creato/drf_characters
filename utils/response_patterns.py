@@ -13,6 +13,26 @@ status_messages = {
 
 
 def generate_response(status_code: int, data: dict | None = None) -> (int, dict):
+    '''
+    Генерация ответа
+
+    Args:
+        status_code: код статуса
+        data: данные
+            {
+              "answer": "test"
+            }
+
+    Returns:
+        Код статуса и словарь данных
+        200,
+        {
+            "message": "Успех",
+            "data": {
+              "answer": "test"
+            }
+        }
+    '''
     return (
         status_code,
         {

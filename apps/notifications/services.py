@@ -28,7 +28,7 @@ class Email:
         Получение шаблона письма
 
         Returns:
-            Шаблон письма или None
+            Объект EmailTemplate или None
         '''
 
         logger.info(
@@ -74,7 +74,13 @@ class Email:
         Форматирование текста для письма
 
         Returns:
-            Кортеж из статуса и словаря данных
+            Код статуса и словарь данных
+
+            200,
+            {
+                "subject": "Подтверждение email",
+                "message": "Подствердите свой email по ссылке"
+            }
         '''
 
         logger.info(
@@ -117,7 +123,8 @@ class Email:
         Отправка письма
 
         Returns:
-            Статус
+            Код статуса
+            200
         '''
 
         email_settings = self.get_send_email_settings
