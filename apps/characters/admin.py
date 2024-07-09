@@ -27,9 +27,12 @@ class CharacterAdmin(admin.ModelAdmin):
 
     def make_available(self, request, queryset):
         queryset.update(is_available=True)
+    make_available.short_description = 'Сделать доступными'
 
     def make_unavailable(self, request, queryset):
         queryset.update(is_available=False)
+    make_unavailable.short_description = 'Сделать недоступными'
+
 
 
 @admin.register(CharactersAPIKey)
