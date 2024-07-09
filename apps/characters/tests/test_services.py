@@ -6,6 +6,8 @@ from django.test import TestCase
 from characters.services import (
     get_key,
     get_level,
+    get_characters_by_level,
+    get_characters_by_ids,
 )
 from users.models import CustomUser
 
@@ -36,7 +38,7 @@ class ServicesTest(TestCase):
         path = f'{self.path}/get_level'
         fixtures = (
             (200, 'valid'),
-            (200, 'valid_but_not_provided'),
+            (200, 'valid_without_api_key'),
             (404, 'not_found'),
         )
 
@@ -46,7 +48,48 @@ class ServicesTest(TestCase):
             with open(f'{path}/{fixture}_request.json') as file:
                 data = json.load(file)
 
-            status_code, response_data = get_level(
+            status_code, level = get_level(
                 api_key=data['api_key'],
+            )
+            self.assertEqual(status_code, code, msg=fixture)
+
+    def test_get_characters_by_level(self):
+        path = f'{self.path}/get_characters_by_level'
+        fixtures = (
+            (200, 'valid'),
+            (200, 'valid_without_api_key'),
+            (404, 'not_found'),
+        )
+
+        for code, name in fixtures:
+            fixture = f'{code}_{name}'
+
+            with open(f'{path}/{fixture}_request.json') as file:
+                data = json.load(file)
+
+            status_code, level = get_characters_by_level(
+                api_key=data['api_key'],
+            )
+            self.assertEqual(status_code, code, msg=fixture)
+
+    def test_get_characters_by_ids(self):
+        path = f'{self.path}/get_characters_by_ids'
+        fixtures = (
+            (200, 'valid'),
+            (200, 'valid_without_api_key'),
+            (400, 'invalid'),
+            (400, 'invalid_structure'),
+            (404, 'not_found'),
+        )
+
+        for code, name in fixtures:
+            fixture = f'{code}_{name}'
+
+            with open(f'{path}/{fixture}_request.json') as file:
+                data = json.load(file)
+
+            status_code, level = get_characters_by_ids(
+                api_key=data['api_key'],
+                data=data['data'],
             )
             self.assertEqual(status_code, code, msg=fixture)

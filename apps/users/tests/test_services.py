@@ -203,7 +203,7 @@ class ServicesTest(TestCase):
         fixtures = (
             (200, 'valid'),
             (400, 'invalid'),
-            (403, 'forbidden'),
+            (500, 'blacklisted_token'),
         )
 
         for code, name in fixtures:
@@ -219,6 +219,7 @@ class ServicesTest(TestCase):
 
             status_code, response_data = logout(
                 data=data,
+                user=self.user,
             )
 
             self.assertEqual(status_code, code, msg=fixture)
