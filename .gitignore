@@ -12,6 +12,9 @@ venv*/
 .env
 local_settings.py
 
+# Logs
+logs/
+
 # Media
 media/*
 !media/avatars/
